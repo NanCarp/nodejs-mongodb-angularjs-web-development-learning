@@ -33,9 +33,9 @@ tags: Node.js MongoDB AngularJS Web 学习
   uv: '1.9.1',  
   v8: '5.1.281.101',  
   zlib: '1.2.11' }  
-```  
+```
 
-### 选择 Node.js IDE  
+### 3.2.3 选择 Node.js IDE  
 暂时用 MarkdwonPad2 ，仍然有些问题。计划用 WebStorm。  
 
 ## 3.3 使用 Node.js 包  
@@ -44,7 +44,7 @@ Node.js 框架最强大功能之一是能够轻松地使用 Node 包管理器（
 module），而不是 NPM，以避免混乱。  
 
 ### 3.3.1 什么是 Node 封装模块  
-Node 封装模块是一个打包的库，它可以很容易地在不同的项目中被共享、冲用呢和安装。  
+Node 封装模块是一个打包的库，它可以很容易地在不同的项目中被共享、重用和安装。  
 
 ### 3.3.2 了解 Node 包注册表  
 Node 包注册表位于 http://npmjs.org。  
@@ -126,7 +126,7 @@ exports.getCensoredWords = getCensoredWords;
     "node": "*"
   }
 }
-```  
+```
 具体而言，至少需要添加 name（名称）、version（版本）和 main 指令。main 指令需要时被加载的主 JavaScript 
 的模块的名称，本例中是 censortext。注意，.js 不是必需的：Node.js 会自动搜索 .js 扩展名。  
 5. 在 .../censorify 文件夹中创建 README.md 的文件，填写任意自述说明。  
@@ -170,5 +170,5 @@ $ node readwords.js
 Some very ****, **** and **** text
 [ 'sad', 'bad', 'mad', 'gloomy' ]
 A very **** day.
-```  
+```
 
