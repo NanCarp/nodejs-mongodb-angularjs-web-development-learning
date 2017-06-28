@@ -8,7 +8,8 @@ tags: Node.js MongoDB AngularJS Web 学习
 ## 3.2 Node.js 安装  
 
 ### 3.2.1 纵观 Node.js 安装位置  
-- **node：** 该文件启动一个 Node.js JavaScript 引擎。如果你传递一个 JavaScript 文件的位置， Node.js 就执行该脚本。如果没有制定目标 JavaScript 文件，就会出来一个脚本提示符，可以利用它直接从控制台执行 JavaScript 代码。  
+- **node：** 该文件启动一个 Node.js JavaScript 引擎。如果你传递一个 JavaScript 文件的位置， Node.js 就执行该脚本。
+如果没有制定目标 JavaScript 文件，就会出来一个脚本提示符，可以利用它直接从控制台执行 JavaScript 代码。  
 - **npm：** 你可以侍弄此命令来管理 Node.js 包。  
 - **node_modules：** 此文件夹包含安装的Node.js 包。这些包作为扩展 node.js 功能的库。  
 
