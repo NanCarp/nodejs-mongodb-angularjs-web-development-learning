@@ -132,9 +132,81 @@ myInterval.unref();
 在事件队列上调度工作的一个非常有用的方法是使用 process.nextTick(callback) 函数。此函数调度要在事件循环的下一次
 循环中运行的工作。不像 setImmediate() 方法，nextTick() 在 I/O 事件被触发之前执行。这可能会导致 I/O 事件的饥饿，
 所以 Node.js 通过默认值为 1000 的 process.maxTickDepth 来限制事件队列的每次循环可执行的 nextTick 事件的数目。  
+下面的代码说明了使用阻塞 I/O 调用、定时器和 nextTick() 时，事件的顺序。  
+```
+// nexttick.js：实现了一系列阻塞 fs 调用，即时计时器和 nextTick() 调用来显示执行顺序
+var fs = require("fs");
+fs.stat("nexttick.js", function(err, stats) {
+	if(stats) {
+		console.log("nexttick.js Exists");
+	}
+});
+setImmediate(function() {
+	console.log("Immediate Timer 1 Executed");
+});
+setImmediate(function() {
+	console.log("Immediate Timer 2 Executed");
+});
+process.nextTick(function() {
+	console.log("Next Tick 1 Executed");
+});
+process.nextTick(function() {
+	console.log("Next Tick 2 Executed");
+});
+```
+输出如下，显示 nextTick() 调用先得到执行：  
+```
+$ node nexttick.js
+Next Tick 1 Executed
+Next Tick 2 Executed
+Immediate Timer 1 Executed
+Immediate Timer 2 Executed
+nexttick.js Exists
 
+```
 
+### 4.2.3 实现事件发射器和监听器  
+本节重点介绍创建自己的自定义事件，以及实现党一个事件被发出时执行的监听器回调。  
+**将自定义事件添加到 JavaSript 对象**  
+事件使用一个 EventEmitter 对象来发出。  
+```
+var events = require('events');
+var emitter = new events.EventEmitter();
+emitter.emit("simpleEvent');
+```
+直接把事件添加到 JavaScript 对象，需要通过在对象实例中调用 events.EventEmitter.call(this) 来在对象中继承 
+EventEmitter 功能，还需要把 events.EventEmitter.prototype 添加到对象的原型中。例如：  
+```
+Function MyObj() {
+    Events.EventEmitter.call(this);
+}
+MyObj.prototype.__proto__ = events.EventEmitter.prototype;
 
+```
+然后，就可以直接从对象实例中触发事件。例如：  
+```
+var myObj = new MyObj();
+myObj.emit("someEvent"):
+```
+
+**把事件监听器添加到对象**  
+一旦有了一个会发出事件的对象实例，就可以喂自己所关心的事件添加监听器。可以通过使用下面的功能之一把监听器添加到 
+EventEmitter 对象。  
+- **.addListener(eventName, callback)**：将回调函数附加到对象的监听器中。每当 eventName 事件被触发时，
+回调函数就被放置在事件队列中执行。
+- **.on(eventName, callback)**：同 .addListener()。
+- **.once(eventName, callback)**：只有 eventName 事件第一次被触发时，回调函数才被放置在事件队列中执行。  
+
+例如，要在前面定义的 MyObject EventEmitter 类的实例中增加一个监听器，可以使用如下代码：  
+```
+function myCallback() {
+    ...
+}
+var myObject = new MyObj();
+myObject.on("someEvent", myCallback);
+```
+
+**从对象中删除监听器**
 
 
 
