@@ -206,9 +206,124 @@ var myObject = new MyObj();
 myObject.on("someEvent", myCallback);
 ```
 
-**从对象中删除监听器**
+**从对象中删除监听器**  
+监听器会导致开销，只在必要时使用。Node.js 在 EventEmitter 对象上提供了多个辅助函数来管理监听器。  
+- **.listener(eventName)：** 返回一个连接到 eventName 事件的监听器函数的数组。
+- **.setMaxListeners(n)：** 如果多于 n 的监听器都加入到 EventEmitter 对象，就会触发警报。默认值 10。
+- **.removeListener(eventName, callback)：** 将 callback 函数从 EventEmitter 对象的 eventName 事件中删除。  
 
+**实现事件监听器和发射器事件**  
+一下代码演示在 Node.js 实现监听器和自定义事件发射器的过程。Account 对象从 EventEmitter 类继承并提供了两种方法，即 
+deposit（存款）和 withdraw（取款），它们都发射 balanceChanged 事件。然后，3 个回调函数的实现连接到 Account 对象
+实例的 balanceChanged 事件并显示各种形式的数据。  
+请注意，checkGoal(acc, goal) 回调函数的实现有点不同于其他回调函数。这说明了如何在事件被触发时，将变量传递到该事件
+监听函数。  
+```
+// emitter_listener.js：创建一个自定义 EventEmitter 对象并实现当
+// balanceChanged 事件被触发时所触发的 3 个监听器
+var events = require('events');
+function Account() {
+	this.balance = 0;
+	events.EventEmitter.call(this);
+	this.deposit = function(amount) {
+		this.balance += amount;
+		this.emit('balanceChanged');
+	};
+	this.withdraw = function(amount) {
+		this.balance -= amount;
+		this.emit('balanceChanged');
+	};
+}
+Account.prototype.__proto__ = events.EventEmitter.prototype;
+function displayBalance(){
+	console.log("Account balance: $%d", this.balance);
+}
+function checkOverdraw() {
+	if (this.balance < 0) {
+		console.log("Account overdrawn!!!");
+	}
+}
+function checkGoal(acc, goal) {
+	if (acc.balance > goal) {
+		console.log("Goal Achieved!!!");
+	}
+}
+var account = new Account();
+account.on("balanceChanged", displayBalance);
+account.on("balanceChanged", checkOverdraw);
+account.on("balanceChanged", function() {
+	checkGoal(this, 1000);
+});
+account.deposit(220);
+account.deposit(320);
+account.deposit(600);
+account.withdraw(1200);
+```
+emitter_listener.js 的输出，显示了监听器回调函数输出的会计报表：    
+```
+$ node emitter_listener.js
+Account balance: $220
+Account balance: $540
+Account balance: $1140
+Goal Achieved!!!
+Account balance: $-60
+Account overdrawn!!!
+```
 
+## 4.3 实现回调  
+### 4.3.1 向回调函数传递额外的参数  
+大部分回调函数都有传递给它们的自动参数，如错误或结果缓冲区。使用回调时，常见的一个问题是如何从调用函数给它们传递额外
+的参数。方法是在一个匿名函数中实现该参数，然后用来自匿名函数的参数调用回调函数。   
+一下代码展示了如何实现回调函数的参数。有两个 sawCar 事件处理程序。请注意，sawCar 仅发出 make 参数。  
+```
+// callback_parameter.js 创建一个匿名函数来添加未由事件发出的附加参数
+var events = require('events');
+function CarShow() {
+	events.EventEmitter.call(this);
+	this.seeCar = function(make) {
+		this.emit('sawCar', make);
+	};
+}
+CarShow.prototype.__proto__ = events.EventEmitter.prototype;
+var show = new CarShow();
+function logCar(make) {
+	console.log("Saw a " + make);
+}
+function logColorCar(make, color) {
+	console.log("Saw a %s %s", color, make);
+}
+// 实现了 logCar(make) 回调处理程序
+show.on("sawCar", logCar);
+// 事件处理程序调用了一个匿名函数，随机选择的颜色被传递到 logColorCar(make, color) 调用
+show.on("sawCar", function(make) {
+	var colors = ['red', 'blue', 'black'];
+	var color = colors[Math.floor(Math.random() * 3)];
+	logColorCar(make, color);
+});
+show.seeCar("Ferrari");
+show.seeCar("Porsche");
+show.seeCar("Bugatti");
+show.seeCar("Lamborghini");
+show.seeCar("Aston Martin");
+```
+输出：  
+```
+$ node callback_parameter
+Saw a Ferrari
+Saw a blue Ferrari
+Saw a Porsche
+Saw a blue Porsche
+Saw a Bugatti
+Saw a blue Bugatti
+Saw a Lamborghini
+Saw a red Lamborghini
+Saw a Aston Martin
+Saw a black Aston Martin
+```
+
+### 4.3.2 在回调中实现闭包  
+一个与异步回调的有趣问题是闭包。闭包（Closure） 是一个 JavaScript 的术语，它表示变量被绑定到一个函数的作用域，但
+不绑定到它的父函数的作用域。当你执行一个异步回调时，父函数的作用域可能更改（例如，通过遍历列表并在每次迭代时改变值）。  
 
 
 
