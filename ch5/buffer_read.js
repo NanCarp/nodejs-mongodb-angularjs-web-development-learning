@@ -1,3 +1,4 @@
+// buffer_read.js： 从 Buffer 对象读取数据的各种方法
 bufUTF8 = new Buffer("Some UTF8 Text \u00b6 \u30c6 \u20ac", 'utf8');
 console.log(bufUTF8.toString());
 console.log(bufUTF8.toString('utf8', 5, 9));
