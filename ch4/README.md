@@ -324,7 +324,82 @@ Saw a black Aston Martin
 ### 4.3.2 在回调中实现闭包  
 一个与异步回调的有趣问题是闭包。闭包（Closure） 是一个 JavaScript 的术语，它表示变量被绑定到一个函数的作用域，但
 不绑定到它的父函数的作用域。当你执行一个异步回调时，父函数的作用域可能更改（例如，通过遍历列表并在每次迭代时改变值）。  
+如果某个函数需要访问父函数的作用域的变量，就需要提供闭包，使这些值在回调函数从事件队列被提取出时可以得到。一个基本
+方法是在函数块内部封装一个异步调用，并传入所需要的变量。  
+下面代码说明了如何实现为 logCar() 异步函数提供闭包的包装器函数。循环 1 实现了一个基本的回调函数。然而，输出显示中，
+汽车的名字始终是被读取的最后一个条目，因为每次循环迭代时， message 的值都会变化。  
+循环 2 实现了把消息作为 msg 参数传递的包装器函数，而 msg 值被附着在回调函数上。因此，输出了正确的消息。为了使回调
+真正异步，使用 process.nextTick() 方法来调度函数。  
+```
+// callback_closure.js：创建一个包装器函数来提供异步回调所需的变量的闭包
+function logCar(logMsg, callback) {
+	process.nextTick(function() {
+		callback(logMsg);
+	});
+}
+var cars = ["Ferrari", "Porsche", "Bugatti"];
+// 循环 1，基本的回调函数
+for (var idx in cars) {
+	var message = "Saw a " + cars[idx];
+	logCar(message, function() {
+		console.log("Normal Callback: " + message);
+	});
+}
+// 循环 2，把消息作为 msg 参数传递的包装器函数函数
+for (var idx in cars) {
+	var message = "Saw a " + cars[idx];
+	(function(msg) {
+		logCar(msg, function() {
+			console.log("Closure Callback: " + msg);
+		});
+	})(message);
+}
+```
+输出：  
+```
+$ node callback_closure.js
+Normal Callback: Saw a Bugatti
+Normal Callback: Saw a Bugatti
+Normal Callback: Saw a Bugatti
+Closure Callback: Saw a Ferrari
+Closure Callback: Saw a Porsche
+Closure Callback: Saw a Bugatti
+```
 
+### 4.3.3 链式回调  
+使用异步函数时，如果两个函数都在事件队列上，无法保证它们的运行顺序。最佳方法是让来自异步函数的回调在此调用该函数，
+直到没有更多的工作要做，以执行链式回调。这样，异步函数永远不会在时间队列上超过一次。  
+以下代码中，条目列表被传递到函数 logCars()，然后异步函数 logCar() 被调用，并且 logCars() 函数作为当 logCar() 完成
+时的回调函数。一次，同一时间只有一个版本的 logCar() 在事件队列上。  
+```
+// callback_chain.js：实现一个回调链，在此来自一个匿名函数的
+// 回调函数回调到最初的函数来遍历列表
+function logCar(car, callback) {
+	console.log("Saw a %s", car);
+	if(cars.length) {
+		process.nextTick(function() {
+			callback();
+		});
+	}
+}
+function logCars(cars) {
+	var car = cars.pop();
+	logCar(car, function() {
+		logCars(cars);
+	});
+}
+var cars = ["Ferrari", "Porsche", "Bugatti", "Lamborghini", "Aston Martin"];
+logCars(cars);
+```
+输出：  
+```
+$ node callback_chain.js
+Saw a Aston Martin
+Saw a Lamborghini
+Saw a Bugatti
+Saw a Porsche
+Saw a Ferrari
+```
 
 
 

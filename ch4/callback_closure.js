@@ -21,3 +21,8 @@ for (var idx in cars) {
 		});
 	})(message);
 }
+// 普通循环，不使用回调函数
+for (var idx in cars) {
+	var message = "Saw a " + cars[idx];
+	console.log("My Callback: " + message);
+}
