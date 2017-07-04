@@ -1,3 +1,4 @@
+// 创建和操作一个 Buffer 对象的切片
 var numbers = new Buffer("123456789");
 console.log(numbers.toString());
 var slice = numbers.slice(3, 6);

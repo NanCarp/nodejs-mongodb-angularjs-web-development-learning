@@ -132,8 +132,92 @@ targetBuffer 参数是另一个 Buffer 对象， targetStart、sourceStart 和 s
 也可以通过直接索引将一个缓冲区中的数据复制到另一个缓冲区，例如：  
 `sourceBuffer[index] = destinationBuffer[index]`  
 
-下面
+下面代码说明了将一个缓冲区的数据复制到另一个缓冲区的 3 个例子。  
+```
+var alphabet = new Buffer('abcdefghijklmnopqrstuvwxyz');
+console.log(alphabet.toString());
+// copy full buffer 
+var blank = new Buffer(26);
+blank.fill();
+console.log("Blank: " + blank.toString());
+alphabet.copy(blank);
+console.log("Blank: " + blank.toString());
+// copy part of buffer
+var dashes = new Buffer(26);
+dashes.fill('-');
+console.log("Dashes: " + dashes.toString());
+alphabet.copy(dashes, 10, 10, 15);
+console.log("Dashes: " + dashes.toString());
+// copy to and from direct indexes of buffers
+var dots = new Buffer('----------------------------');
+dots.fill('.');
+console.log("dots: " + dots.toString());
+for (var i = 0; i < dots.length; i++) {
+	if (i % 2) {
+		dots[i] = alphabet[i];
+	}
+}
+console.log("dots: " + dots.toString());
+```
+输出：  
+```
+$ node buffer_copy.js
+abcdefghijklmnopqrstuvwxyz
+Blank:
+Blank: abcdefghijklmnopqrstuvwxyz
+Dashes: --------------------------
+Dashes: ----------klmno-----------
+dots: ............................
+dots: .b.d.f.h.j.l.n.p.r.t.v.x.z.
+```
 
+### 5.2.7 对缓冲区切片  
+**切片（slice）** 是缓冲区的开始索引能和结束索引之间的部分。对缓冲区切片可以让你操作一个特定的快。  
+可以使用 slice([start], [end]) 创建切片，它返回一个 Buffer 对象，其指向原缓冲区的 start 索引，并具有 
+end - start 的长度。请记住，切片与副本不同。编辑副本不影响原缓冲区，**编辑切片，会改变原缓冲区**。  
+示例：  
+```
+// 创建和操作一个 Buffer 对象的切片
+var numbers = new Buffer("123456789");
+console.log(numbers.toString());
+var slice = numbers.slice(3, 6);
+console.log(slice.toString());
+slice[0] = '#'.charCodeAt(0);
+console.log(slice.toString());
+console.log(numbers.toString());
+```
+输出：  
+```
+$ node buffer_slice.js
+123456789
+456
+#56
+123#56789
+```
+
+### 5.2.8 拼接缓冲区  
+可以把两个或多个 Buffer 对象拼接在一起，形成一个新的缓冲区。concat(list, [totalLength]) 方法接受 Buffer 对象
+的数组作为第一个参数，并把定义缓冲区最大字节数的 totalLength 作为可选的第二个参数。Buffer 对象按照他们出现在列表
+中的顺序被拼接，一个新的 Buffer 对象被返回，它包含至多 totalLength 字节的原始缓冲区的内容。  
+如果不提供 totalLength 参数，concat() 就计算出总长度。但是，这样它必须遍历列表，所以提供 totalLength 执行得更快
+一点。
+一下代码线拼接基 Buffer 对象和一个缓冲区，然后再拼接另一个缓冲区。  
+```
+// 拼接 Buffer 字符串
+var af = new Buffer("African Swallow?");
+var eu = new Buffer("European Swallow?");
+var question = new Buffer("Air Speed Velocity of an ");
+console.log(Buffer.concat([question, af]).toString());
+console.log(Buffer.concat([question, eu]).toString());
+```
+输出：  
+```
+$ node buffer_concat.js
+Air Speed Velocity of an African Swallow?
+Air Speed Velocity of an European Swallow?
+```
+
+## 5.3 使用 Stream 模块来传递数据  
 
 
 
