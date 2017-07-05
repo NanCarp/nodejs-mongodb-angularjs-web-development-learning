@@ -1,3 +1,4 @@
+// 把 Readable 流传送到 Writable 流
 var stream = require('stream');
 var util = require('util');
 util.inherits(Reader, stream.Readable);

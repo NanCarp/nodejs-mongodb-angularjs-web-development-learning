@@ -1,3 +1,4 @@
+// 实现 Transform 流对象
 var stream = require('stream');
 var util = require('util');
 util.inherits(JSONObjectStream, stream.Transform);

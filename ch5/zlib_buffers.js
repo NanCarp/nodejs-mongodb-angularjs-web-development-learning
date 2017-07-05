@@ -1,3 +1,4 @@
+// 使用 Zlib 模块压缩/解压缩缓冲区
 var zlib = require('zlib');
 var input = '..................text................';
 zlib.deflate(input, function(err, buffer) {

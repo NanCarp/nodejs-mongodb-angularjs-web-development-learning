@@ -260,10 +260,10 @@ util.inherits(MyReadableStream, stream.Readable);
 ```
 然后创建对象调用的实例：  
 `stream.Readable.call(this, opt);`  
-还需要实现一个调用 push() 来输出 Readable 对象中的数据的 _read() 方法。push() 调用应推入的是一个 String、Buffer 
-或者 null。  
-下面实现了一个 Readable 流，并从中读取数据。注意，Answers() 类继承自 Readable，然后实现了 Answers.prototype._read() 
-函数来处理数据的推出。
+还需要实现一个调用 push() 来输出 Readable 对象中的数据的 _read() 方法。push() 调用应推入的是一个 String、
+Buffer 或者 null。  
+下面实现了一个 Readable 流，并从中读取数据。注意，Answers() 类继承自 Readable，然后实现了 
+Answers.prototype._read() 函数来处理数据的推出。
 ```
 // 实现一个 Readable 流对象
 var stream = require('stream');
@@ -314,8 +314,8 @@ Writable 流的常见实例：
 - 子进程的 stdin
 - process.stdout 和 process.stderr
 
-Writable 流提供 write(chunk, [encoding], [callback]) 方法来将数据写入流中。其中，chunk（数据块）中包含要写入
-的数据；encoding 指定字符串的编码；callback 指定当数据已经完全刷新时执行的一个回调函数。如果数据被成功写入，
+Writable 流提供 write(chunk, [encoding], [callback]) 方法来将数据写入流中。其中，chunk（数据块）中包含要
+写入的数据；encoding 指定字符串的编码；callback 指定当数据已经完全刷新时执行的一个回调函数。如果数据被成功写入，
 则 write() 函数返回 true。  
 Writable 公开了以下事件：  
 
@@ -449,12 +449,198 @@ Duplex 和 Transform 流区别：Transform 流不用实现 _read() 和 _write() 
 write() 请求的数据，对其修改，并推出修改后的数据。  
 
 以下代码，实现 Transform 流，这个流接受 JSON 字符串，将它们转换为对象，然后发出发送对象的名为 object 的自定义
-事件给所有监听器。该 _transform() 函数也修改对象来包括一个 handled 属性，然后以字符串形式发送。
- 
+事件给所有监听器。该 _transform() 函数也修改对象来包括一个 handled 属性，然后以字符串形式发送。  
+```
+// 实现 Transform 流对象
+var stream = require('stream');
+var util = require('util');
+util.inherits(JSONObjectStream, stream.Transform);
+function JSONObjectStream(opt) {
+	stream.Transform.call(this, opt);
+}
+JSONObjectStream.prototype._transform = function(data, encoding, callback) {
+	object = data ? JSON.parse(data.toString()) : "";
+	this.emit("object", object);
+	object.handled = true;
+	this.push(JSON.stringify(object));
+	callback();
+};
+JSONObjectStream.prototype._flush = function(cb) {
+	cb();
+};
+var tc = new JSONObjectStream();
+tc.on("object", function() {
+	console.log("Name: %s", object.name);
+	console.log("Color: %s", object.color);
+});
+tc.on("data", function(data) {
+	console.log("Data: %s", data.toString());
+});
+tc.write('{"name":"Carolinus", "color": "Green"}');
+tc.write('{"name":"Solarius", "color": "Blue"}');
+tc.write('{"name":"Lo Tae Zhao", "color": "Gold"}');
+tc.write('{"name":"Ommadon", "color": "Red"}');
+```
+输出：  
+```
+$ node stream_transform.js
+Name: Carolinus
+Color: Green
+Data: {"name":"Carolinus","color":"Green","handled":true}
+Name: Solarius
+Color: Blue
+Data: {"name":"Solarius","color":"Blue","handled":true}
+Name: Lo Tae Zhao
+Color: Gold
+Data: {"name":"Lo Tae Zhao","color":"Gold","handled":true}
+Name: Ommadon
+Color: Red
+Data: {"name":"Ommadon","color":"Red","handled":true}
+```
 
+### 5.3.5 把 Readable 流用管道输送到 Writable 流  
+通过 pipe(writableStream, [options]) 函数把 Readable 流的输出直接输入到 Writable 流。options 参数接受一个 
+end 属性为 true 或 false 的对象。true：Writable 流随着 Readable 流的结束而结束。这是默认行为。例如：  
+`readStream.pipe(writeStream, {end:true});`  
+可以使用 unpipe(destinationStream) 选项来打破管道。  
+下面代码实现了一个 Readable 流和 Writable 流，然后使用 pipe() 函数把它们链接在一起。  
+```
+// 把 Readable 流传送到 Writable 流
+var stream = require('stream');
+var util = require('util');
+util.inherits(Reader, stream.Readable);
+util.inherits(Writer, stream.Writable);
+function Reader(opt) {
+	stream.Readable.call(this, opt);
+	this._index = 1;
+}
+Reader.prototype._read = function(size) {
+	var i = this._index++;
+	if (i > 10) {
+		this.push(null);
+	} else {
+		this.push("Item " + i.toString());
+	}
+};
+function Writer(opt) {
+	stream.Writable.call(this, opt);
+	this._index = 1;
+}
+Writer.prototype._write = function(data, encoding, callback) {
+	console.log(data.toString());
+	callback();
+};
+var r = new Reader();
+var w = new Writer();
+r.pipe(w);
+```
+输出：  
+```
+$ node stream_piped.js
+Item 1
+Item 2
+Item 3
+Item 4
+Item 5
+Item 6
+Item 7
+Item 8
+Item 9
+Item 10
+```
 
+## 5.4 用 Zlib 压缩与解压缩数据  
+在使用大的系统或移动大量数据时，压缩/解压缩数据的能力极为有用。  
+记住，压缩数据需要花费 CPU 周期，所以在招致压缩/解压缩成本之前，应该确信压缩数据会带来好处。  
+Zlib 支持如下压缩方法：  
+- gzip/gunzip：标准 gzip 压缩。
+- deflate/inflate：基于 Huffman 编码的标准 deflate 压缩算法。
+- deflateRaw/inflateRaw：针对原始缓冲区的 deflate 压缩算法。
 
+### 5.4.1 压缩和解压缩缓冲区  
+Zlib 模块提供了几个辅助含税，基本格式 function(buffer, callback)，其中 buffer 是被压缩/解压缩的缓冲区，
+callback 是压缩/解压缩发生之后所执行的回调函数。  
+以下几种示例：  
+```
+// 使用 Zlib 模块压缩/解压缩缓冲区
+var zlib = require('zlib');
+var input = '..................text................';
+zlib.deflate(input, function(err, buffer) {
+	if (!err) {
+		console.log("deflate (%s): ", buffer.length, buffer.toString('base64'));
+		zlib.inflate(buffer, function(err, buffer) {
+			if (!err) {
+				console.log("inflate (%s): ", buffer.length, buffer.toString());
+			}
+		});
+		zlib.unzip(buffer, function(err, buffer) {
+			if (!err) {
+				console.log("unzip deflate (%s): ", buffer.length, buffer.toString());
+			}
+		});
+	}
+});
 
+zlib.deflateRaw(input, function(err, buffer) {
+	if (!err) {
+		console.log("deflateRaw (%s): ", buffer.length, buffer.toString('base64'));
+		zlib.inflateRaw(buffer, function(err, buffer) {
+			if (!err) {
+				console.log("inflateRaw (%s): ", buffer.length, buffer.toString());
+			}
+		});
+	}
+});
+
+zlib.gzip(input, function(err, buffer) {
+	if (!err) {
+		console.log("gzip (%s): ", buffer.length, buffer.toString('base64'));
+		zlib.gunzip(buffer, function(err, buffer) {
+			if (!err) {
+				console.log("gunzip (%s): ", buffer.length, buffer.toString());
+			}
+		});
+		zlib.unzip(buffer, function(err, buffer) {
+			if (!err) {
+				console.log("unzip gzip (%s): ", buffer.length, buffer.toString());
+			}
+		});
+	}
+});
+```
+输出：  
+```
+$ node zlib_buffers.js
+deflate (17):  eJzT00MHJakVJehiAJizB+I=
+deflateRaw (11):  09NDByWpFSXoYgA=
+gzip (29):  H4sIAAAAAAAACtPTQwclqRUl6GIAandyAiYAAAA=
+inflate (38):  ..................text................
+unzip deflate (38):  ..................text................
+inflateRaw (38):  ..................text................
+gunzip (38):  ..................text................
+unzip gzip (38):  ..................text................
+```
+
+### 5.2.4 压缩/解压缩流  
+对流操作使用 pipe() 函数，用过压缩/解压缩对象把数据从一个流输送到另一个流。 适用于把任何 Readable 数据压缩成 
+Writable 流。  
+示例使用 fs.ReadStream 和 fs.WriteStream 压缩文件内容，通过使用 xlib.Gzip() 对象压缩一个文件的内容，然后
+用 zlib.Gunzip() 对象对它解压缩。注意，在试图解压缩文件，以允许数据被刷新到磁盘之前，有 3 秒的超时时间延迟。  
+```
+// 使用 Zlib 模块压缩/解压缩文件流
+var zlib = require("zlib");
+var gzip = zlib.createGzip();
+var fs = require('fs');
+var inFile = fs.createReadStream('zlib_file.js');
+var outFile = fs.createWriteStream('zlib_file.gz');
+inFile.pipe(gzip).pipe(outFile);
+setTimeout(function(){
+	var gunzip = zlib.createUnzip({flush: zlib.Z_FULL_FLUSH});
+	var inFile = fs.createReadStream('zlib_file.gz');
+	var outFile = fs.createWriteStream('zlib_file.unzipped');
+	inFile.pipe(gunzip).pipe(outFile);
+}, 3000);
+```
 
 
 
