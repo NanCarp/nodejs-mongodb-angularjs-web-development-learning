@@ -218,8 +218,172 @@ Air Speed Velocity of an European Swallow?
 ```
 
 ## 5.3 使用 Stream 模块来传递数据  
+数据流是可读，可写，或既可读又可写的内存结构。  
+流的目的是提供一种从一个地方向另一个地方传送数据的通用机制。它们还公开各种事件，如数据可被读取时的 data，当
+错误发生时的 error 等等，这样可以注册监听器来在流变为可用或已准备好被写入时处理数据。  
+流一般用于 HTTP 数据和文件。可以作为读取流，打开文件，或者从 HTTP 请求访问数据，并读出所需的字节。  
 
+### 5.3.1 Readable 流  
+Readable 流旨在提供一种机制，以方便地读取从其他来源进入应用程序的数据。  
+常见实例：  
+- 在客户端的 HTTP 响应
+- 在服务器的 HTTP 请求
+- fs 读取流
+- zlib 流
+- TCP 套接字
+- 子进程的 stdout 和 stderr
+- process.stdin
 
+Readable 流提供 read([size]) 方法来读取数据，size 指定从流中读取的字节数。read() 可以返回一个 String 对象、
+Buffer 对象或 null。Readable 流也公开了以下事件：  
+- readable：在数据块可以从流中读取的时候发出。
+- data：类似于 readable，不同之处在于，当数据的事件处理程序被连接时，流转变成流动的模式，并且数据处理程序被
+连续地调用，直到所有数据都被用尽。
+- end：当数据将不再被提供时由流发出。
+- close：当底层的资源，如文件，已关闭时发出。
+- error：当在接收数据中出现错误时发出。
+
+Readable 对象也提供了许多函数： 
+- read([size])：从流中读取数据。这些数据可以是 String、Buffer 或者 null （null 表示没有剩下任何更多的数据）。
+如果指定 size 参数，那么被读取的数据将仅限于那个字节数。
+- setEncoding(encoding)：设置从 read() 请求读取返回 String 时使用的编码。
+- pause()：暂停从该对象发出的 data 事件。
+- resume()：恢复从该对象发出的 data 事件。
+- pipe(destination, [options])：把这个流的输出传输到 destination（目的地）指定的 Writable 流对象。options 是
+一个 JavaScript 对象。例如，{end:true} 当 Readable 结束时就结束 Writable 目的地。
+- unpipe([destination])：从 Writable 目的地断开这一对象。
+
+为了实现自定义 Readable 流对象，需要首先继承 Readable 流的功能。最简单的方法是使用 util 模块的 inherits() 方法：
+```
+var util = require('util');
+util.inherits(MyReadableStream, stream.Readable);
+```
+然后创建对象调用的实例：  
+`stream.Readable.call(this, opt);`  
+还需要实现一个调用 push() 来输出 Readable 对象中的数据的 _read() 方法。push() 调用应推入的是一个 String、Buffer 
+或者 null。  
+下面实现了一个 Readable 流，并从中读取数据。注意，Answers() 类继承自 Readable，然后实现了 Answers.prototype._read() 
+函数来处理数据的推出。
+```
+// 实现一个 Readable 流对象
+var stream = require('stream');
+var util = require('util');
+util.inherits(Answers, stream.Readable);
+function Answers(opt) {
+	stream.Readable.call(this, opt);
+	this.quotes = ["yes", "no", "maybe"];
+	this._index = 0;
+}
+Answers.prototype._read = function() {
+	if (this._index > this.quotes.length) {
+		this.push(null);
+	} else {
+		this.push(this.quotes[this._index]);
+		this._index += 1;
+	}
+}
+var r = new Answers();
+// 直接 read() 调用从流中读取第一个条目
+console.log("Direct read: " + r.read().toString());
+// 数据处理程序读取其余条目
+r.on('data', function(data){
+	console.log("Callback read: " + data.toString());
+});
+r.on('end', function(data){
+	console.log("No more answers.");
+});
+```
+输出：  
+```
+$ node stream_read.js
+Direct read: yes
+Callback read: no
+Callback read: maybe
+No more answers.
+```
+
+### 5.3.2 Writable 流  
+Writable 流旨在提供把数据写入一种可以轻松地在代码的另一个区域被使用的形式的机制。  
+Writable 流的常见实例：  
+
+- 在客户端的 HTTP 请求
+- 在服务器的 HTTP 响应
+- fs 写入刘
+- zlib 流
+- TCP 套接字
+- 子进程的 stdin
+- process.stdout 和 process.stderr
+
+Writable 流提供 write(chunk, [encoding], [callback]) 方法来将数据写入流中。其中，chunk（数据块）中包含要写入
+的数据；encoding 指定字符串的编码；callback 指定当数据已经完全刷新时执行的一个回调函数。如果数据被成功写入，
+则 write() 函数返回 true。  
+Writable 公开了以下事件：  
+
+- drain：在 write() 调用返回 false 后，当准备好开始写更多的数据时，发出此事件通知监听器。
+- finish：当 end() 在 Writable 对象上被调用，所有的数据都被刷新，并且不会有更多的数据将被接收时发出此事件。
+- pipe：当 pipe() 方法在 Readable 流上被调用，以添加此 Writable 为目的地时，发出此事件。
+- unpipe： 当 unpipe() 方法在 Readable 流上被调用，以删除此 Writable 为目的地时，发出此事件。
+
+可用的 Writable 流对象的方法：  
+
+- write(chunk, [encoding], [callback])：将数据块写入流对象的数据位置。该数据可以是字符串或缓冲区。如果
+指定 encoding，那么将其用于对字符串数据的编码。如果指定 callback，那么它在数据已被刷新后调用。
+- end([chunk], [encoding], [callback])：与 write() 相同，但是它把 Writable 对象置于不再接收数据的状态，
+并发送 finish 事件。
+
+实现自定义 Writable 流对象，首先继承 Writable 流的功能，使用 util模块的 inherits() 方法：  
+```
+var util = require('util');
+util.inherits(MyWritableStream, stream.Writable);
+```
+创建对象调用的实例：  
+`stream.Writable.call(this, opt);`  
+还需实现一个 _write(data, encoding, callback) 方法存储 Writable 对象的数据。  
+下面代码说明了实现和写入 Writable 流的基本知识：  
+```
+// 实现一个 Writable 流对象
+var stream = require('stream');
+var util = require('util');
+util.inherits(Writer, stream.Writable);
+function Writer(opt) {
+	stream.Writable.call(this, opt);
+	this.data = new Array();
+}
+Writer.prototype._write = function(data, encoding, callback) {
+	this.data.push(data.toString('utf8'));
+	console.log("Adding: " + data);
+	callback();
+};
+var w = new Writer();
+for (var i = 1; i <= 5; i++) {
+	w.write("Item" + i, 'utf8');
+}
+w.end("ItemLast");
+console.log(w.data);
+```
+输出：  
+```
+$ node stream_write.js
+Adding: Item1
+Adding: Item2
+Adding: Item3
+Adding: Item4
+Adding: Item5
+Adding: ItemLast
+[ 'Item1', 'Item2', 'Item3', 'Item4', 'Item5', 'ItemLast' ]
+```
+
+### 5.3.3 Duplex 流  
+Duplex（双向）流是结合可读写功能的流。Duplex 流的很好地例子是 TCP 套接字连接。可在创建套接字后读取和写入它。  
+实现自定义 Duplex 流对象，首先继承 Duplex 流的功能，使用 util 模块的 inherits() 方法：  
+```
+var util = require('util');
+util.inherits(MuDuplexStream, stream.Duplex);
+```
+然后创建对象调用实例：  
+`stream.Duplex.call(this, opt);`
+创建一个 Duplex 流的 opt 参数接受一个 allowHalfOpen 数次那个设置为 true 或 false 的对象。true：即使可写入端
+已经结束，可读取端也保持打开状态，反之亦然。false：结束可写入端也会结束可读取端，反之亦然。  
 
 
 

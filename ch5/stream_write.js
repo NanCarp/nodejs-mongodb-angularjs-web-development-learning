@@ -1,3 +1,4 @@
+// 实现一个 Writable 流对象
 var stream = require('stream');
 var util = require('util');
 util.inherits(Writer, stream.Writable);

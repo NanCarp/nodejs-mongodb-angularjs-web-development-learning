@@ -1,3 +1,4 @@
+// 实现一个 Readable 流对象
 var stream = require('stream');
 var util = require('util');
 util.inherits(Answers, stream.Readable);
@@ -15,7 +16,9 @@ Answers.prototype._read = function() {
 	}
 }
 var r = new Answers();
+// 直接 read() 调用从流中读取第一个条目
 console.log("Direct read: " + r.read().toString());
+// 数据处理程序读取其余条目
 r.on('data', function(data){
 	console.log("Callback read: " + data.toString());
 });
