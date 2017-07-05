@@ -1,3 +1,4 @@
+// 实现 Duplex 流对象
 var stream = require('stream');
 var util = require('util');
 util.inherits(Duplexer, stream.Duplex);
@@ -33,4 +34,3 @@ d.write("therefore ");
 d.write("I am.");
 d.write("Rene Descartes");
 d.write("stop");
-

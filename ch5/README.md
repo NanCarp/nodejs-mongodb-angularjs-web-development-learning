@@ -383,7 +383,74 @@ util.inherits(MuDuplexStream, stream.Duplex);
 然后创建对象调用实例：  
 `stream.Duplex.call(this, opt);`
 创建一个 Duplex 流的 opt 参数接受一个 allowHalfOpen 数次那个设置为 true 或 false 的对象。true：即使可写入端
-已经结束，可读取端也保持打开状态，反之亦然。false：结束可写入端也会结束可读取端，反之亦然。  
+已经结束，可读取端也保持打开状态，反之亦然。false：结束可写入端也会结束可读取端，反之亦然。 
+当实现一个全 Duplex 流时，在原型化 Duplex 类的时候需要同时实现 _read(size) 和 _write(data, encoding, callback)
+方法。  
+下面代码实现、写入、读取 Duplex 流。Duplex() 类继承自 Duplex 流，并实现了基本的 _write() 函数来将数据存储在该
+对象中的数组内。_read() 函数使用 shift() 来获得此数组的第一个条目，如果等于“stop”，那么推入 null；如果有值，
+那么推入它；或者如果没有值，则设置超时时间定时器来回调到 _read() 函数。  
+```
+// 实现 Duplex 流对象
+var stream = require('stream');
+var util = require('util');
+util.inherits(Duplexer, stream.Duplex);
+function Duplexer(opt) {
+	stream.Duplex.call(this, opt);
+	this.data = [];
+}
+Duplexer.prototype._read = function readItem(size) {
+	var chunk = this.data.shift();
+	if (chunk == "stop") {
+		this.push(null);
+	} else {
+		if (chunk) {
+			this.push(chunk);
+		} else {
+			setTimeout(readItem.bind(this), 500, size);
+		}
+	}
+};
+Duplexer.prototype._write = function(data, encoding, callback) {
+	this.data.push(data);
+	callback();
+};
+var d = new Duplexer();
+d.on('data', function(chunk){
+	console.log('read: ', chunk.toString());
+});
+d.on('end', function(){
+	console.log('Message Complete');
+});
+d.write("I think, ");
+d.write("therefore ");
+d.write("I am.");
+d.write("Rene Descartes");
+d.write("stop");
+```
+输出：  
+```
+$ node stream_duplex.js
+read:  I think,
+read:  therefore
+read:  I am.
+read:  Rene Descartes
+Message Complete
+```
+
+### 5.3.4 Transform 流  
+Transform（变换）流扩展了 Duplex 流，但它修改 Writable 流和 Readable 流之间的数据。当需要修改从一个系统到
+另一个系统的数据时，此类型会非常有用。  
+实例：  
+- zlib 流
+- crypto 流
+
+Duplex 和 Transform 流区别：Transform 流不用实现 _read() 和 _write() 原型方法。这些被作为直通函数提供。但是
+需要实现 _transform(chunk, encoding, callback) 和 _flush(callback) 方法。此 _transform() 方法应该接受来自 
+write() 请求的数据，对其修改，并推出修改后的数据。  
+
+以下代码，实现 Transform 流，这个流接受 JSON 字符串，将它们转换为对象，然后发出发送对象的名为 object 的自定义
+事件给所有监听器。该 _transform() 函数也修改对象来包括一个 handled 属性，然后以字符串形式发送。
+ 
 
 
 
