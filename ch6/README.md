@@ -124,9 +124,90 @@ Wrote carrots  8bytes
 ```
 
 ### 异步写入文件  
+文件写入的异步方法在事件队列中放置一个写入请求，然后将控制返回给调用代码。除非事件循环提取出写入请求，并且执行它，
+否则实际的写操作不会发生。在同一个文件上执行多个异步写入请求是，除非在执行下一个写入前等待第一个写入回调函数完成，
+否则不能保证执行的顺序。通常情况下，最简单的是把写操作嵌套在上一个写操作的回调函数中。  
+要异步写入一个文件，首先使用 open() 打开它，然后在打开请求的回调函数已经执行后，使用 fs.write() 将数据写入文件。
+以下是 fs.write() 语法：  
+`fs.write(fd, data, offset, length, position, callback)`  
+- fd：openSync() 返回的文件描述符。
+- data：指定将被写入文件中的 String 或 Buffer 对象。
+- offset：指定要开始读取数据的输入数据中的索引。如果想从字符串或缓冲区的当前索引开始，值应该为 null。
+- length：指定要写入的字节数，可以指定 null，表示一直写到数据缓冲区的末尾。
+- position：指定在文件中写入的位置，null 表示使用文件当前位置。
+- callback：必须是可以接受 error 和 bytes 两个参数的函数，其中 error 是在写过程中发生的错误，bytes 指定写入
+字节数。
 
+以下代码显示了如何实现基本的异步写入来把一系列字符串数据存储到一个文件。注意，open() 的 callback 所指定的回调函数
+调用 writeFruit() 函数，并传递文件描述符，write() 方法的回调也调用 writeFruit() ，并传递文件描述符。这确保了异步
+写入在另一个执行前完成。  
+```
+// 执行异步写入文件
+var fs = require('fs');
+var fruitBowl = ['apple', 'orange', 'banana', 'grapes'];
+function writeFruit(fd) {
+	if (fruitBowl.length) {
+		var fruit = fruitBowl.pop() + " ";
+		fs.write(fd, fruit, null, null, function(err, bytes) {
+			if (err) {
+				console.log("File Write Failed.");
+			} else {
+				console.log("Wrote: %s %dbytes", fruit, bytes);
+				writeFruit(fd);
+			}
+			
+		});
+	} else {
+		fs.close(fd);
+	}
+}
+fs.open('fruit.txt', 'w', function(err, fd) {
+	writeFruit(fd);
+});
+```
+输出：  
+```
+$ node file_write_async.js
+Wrote: grapes  7bytes
+Wrote: banana  7bytes
+Wrote: orange  7bytes
+Wrote: apple  6bytes
+```
 
-
+### 6.3.4 流式文件写入  
+往一个文件写入大量数据时，最好的方法之一是使用流，其中包括把文件作为一个 Writable 流打开。  
+要将数据异步传送到文件，首先用以下语法创建一个 Writable 对象：  
+`fs.createWritableStream(path, [options])`  
+- path：指定文件路径
+- options：可选，是一个对象，可以包含定义字符串编码，以及打开文件时使用得模式和标志的 encoding、mode 和 flag 
+属性。
+一旦打开了 Writable 文件流，就可以使用标准的流式 write(buffer) 方法来写入它。当写入完成后，再调用 end() 方法
+来关闭流。  
+以下代码实现了基本的 Writable 文件流。注意，代码完成写入后，执行 end() 方法，触发 close 事件。  
+```
+// 实现一个 Writable 流，允许流式写入一个文件
+var fs = require('fs');
+var grains = ['wheat', 'rice', 'oats'];
+var options = {encoding: 'utf8', flag: 'w'};
+var fileWriteStream = fs.createWriteStream("grains.txt", options);
+fileWriteStream.on("close", function() {
+	console.log("File Closed.");
+});
+while (grains.length) {
+	var data = grains.pop() + " ";
+	fileWriteStream.write(data);
+	console.log("Wrote: %s", data);
+}
+fileWriteStream.end();
+```
+输出：  
+```
+$ node file_write_stream.js
+Wrote: oats
+Wrote: rice
+Wrote: wheat
+File Closed.
+```
 
 
 
