@@ -370,6 +370,141 @@ File Closed.
 
 ## 6.5 其他文件系统任务  
 ### 6.5.1 验证路径的存在性  
+在对文件或目录执行任何形式的读/写操作之前，都要验证路径是否存在。可以使用以下方法：  
+```
+fs.exists(path, callback)
+fs.existsSync(path)
+```
+fs.existsSync(path) 返回 true 或 false ，这取决于路径是否存在。fs.exists() 的回调函数将被传入 true 或 false，
+例如，下面的代码验证在当前路径中以 filesystem.js 命名的文件是否存在，并显示验证的结果：  
+```
+fs.exists('filesystem.js', function (exists) {
+	console.log(exits ? "Path Exists" : "Path Does Not Exist");
+}):
+```
+
+### 6.5.2 获取文件信息  
+获取文件系统对象的基本信息，如文件大小、模式、修改时间，以及条目是否是一个文件或文件夹等。使用下面的调用：  
+```
+fs.stats(path, callback)
+fs.statsSync(path)
+```
+fsStatsSync() 方法返回一个 Stats 对象。执行 fs.stats() 方法，Stats 对象作为第二个参数被传递到回调函数。第一个
+参数是 error。  
+附加到 Stats 对象上的最常用的属性和方法：  
+- isFile()：如果该条目是一个文件，则返回 true
+- isDirectory()：如果该条目是一个目录，则返回 true
+- isSocket()：如果该条目是一个套接字，则返回 true
+- dev：指定文件所在的设备 ID
+- mode：指定文件的访问模式
+- size：指定文件的字节数
+- blksize：指定用于存储文件的快的大小，以字节为单位
+- blocks：指定文件在磁盘上占用的块的数目
+- atime：指定上次访问文件的时间
+- mtime：指定文件的最后修改时间
+- ctime：指定文件的创建时间
+
+下面代码先执行 fs.stats() 调用，然后作为 JSON 字符串输出对象的结果，并使用 isFile()、isDirector() 和 isSocket()
+调用，说明了如何使用 fs.stas() 调用：  
+```
+// 实现一个 fs.stats() 调用来检索有关文件的信息
+var fs = require('fs');
+fs.stat('file_stats.js', function (err, stats) {
+	if (!err) {
+		console.log('stats: ' + JSON.stringify(stats, null, ' '));
+		console.log(stats.isFile() ? "Is a File" : "Is not a File");
+		console.log(stats.isDirectory() ? "Is a Folder" : "Is not a Folder");
+		console.log(stats.isSocket() ? "Is a Socket" : "Is not a Socket");
+		stats.isDirectory();
+		stats.isBlockDevice();
+		stats.isCharacterDevice();
+		//stats.isSymbolicLink(); //only lstat
+		stats.isFIFO();
+		stats.isSocket();
+	}
+});
+```
+输出：  
+```
+$ node file_stats.js
+stats: {
+ "dev": -996849395,
+ "mode": 33206,
+ "nlink": 1,
+ "uid": 0,
+ "gid": 0,
+ "rdev": 0,
+ "ino": 147211412819692740,
+ "size": 577,
+ "atime": "2017-07-07T13:57:45.893Z",
+ "mtime": "2017-07-07T14:04:33.741Z",
+ "ctime": "2017-07-07T14:04:33.741Z",
+ "birthtime": "2017-07-07T13:57:45.892Z"
+}
+Is a File
+Is not a Folder
+Is not a Socket
+```
+
+### 6.5.3 列出文件  
+常见任务：列出在目录中的文件和文件夹——例如列出一个目录中的文件，以确定是否需要进行清理；在目录结构上动态操作等。  
+可以使用以下名利读取条目列表来访问文件系统中的文件：  
+```
+fs.readdir(path, callback)
+fs.readdirSync(path)
+```
+readdirSync() 返回指定路径中条目名称的字符串数组。 readdir() ，该列表作为第二个参数被传递给回调函数，如果有错误，
+此错误作为第一个参数传递。  
+下面实现了一个嵌套的回调链来遍历目录结构并输出其中的条目。注意，回调函数实现了一个包装器，它提供一个 fullPath 变量
+的闭包，并且通过一部回调函数使 WalkDirs() 函数循环：  
+```
+// 实现一个回调链来遍历和输出目录结构的内容
+var fs = require('fs');
+var Path = require('path');
+function WalkDirs(dirPath) {
+	console.log(dirPath);
+	fs.readdir(dirPath, function(err, entries) {
+		for (var idx in entries) {
+			var fullPath = Path.join(dirPath, entries[idx]);
+			(function(fullPath) {
+				fs.stat(fullPath, function(err, stats) {
+					if (stats && stats.isFile()) {
+						console.log(fullPath);
+					} else {
+						WalkDirs(fullPath);
+					}
+				});
+			})(fullPath);
+		}
+	});
+}
+WalkDirs("../ch6");
+```
+输出：  
+```
+$ node file_readdir.js
+../ch6
+..\ch6\config.txt
+..\ch6\file_read.js
+..\ch6\file_readdir.js
+..\ch6\file_read_async.js
+..\ch6\file_read_stream.js
+..\ch6\file_read_sync.js
+..\ch6\file_stats.js
+..\ch6\file_write.js
+..\ch6\file_write_sync.js
+..\ch6\file_write_async.js
+..\ch6\file_write_stream.js
+..\ch6\README.md
+..\ch6\fruit.txt
+..\ch6\grains.txt
+..\ch6\other.js
+..\ch6\test
+..\ch6\veggie.txt
+..\ch6\test\test.js
+```
+
+
 
 
 
