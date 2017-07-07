@@ -125,7 +125,7 @@ Wrote carrots  8bytes
 
 ### 异步写入文件  
 文件写入的异步方法在事件队列中放置一个写入请求，然后将控制返回给调用代码。除非事件循环提取出写入请求，并且执行它，
-否则实际的写操作不会发生。在同一个文件上执行多个异步写入请求是，除非在执行下一个写入前等待第一个写入回调函数完成，
+否则实际的写操作不会发生。在同一个文件上执行多个异步写入请求时，除非在执行下一个写入前等待第一个写入回调函数完成，
 否则不能保证执行的顺序。通常情况下，最简单的是把写操作嵌套在上一个写操作的回调函数中。  
 要异步写入一个文件，首先使用 open() 打开它，然后在打开请求的回调函数已经执行后，使用 fs.write() 将数据写入文件。
 以下是 fs.write() 语法：  
@@ -208,6 +208,169 @@ Wrote: rice
 Wrote: wheat
 File Closed.
 ```
+
+### 6.4.1 简单文件读取  
+readFile(） 方法从文件中把全部内容读取到数据缓冲区，语法：  
+```
+fs.readFile(path, [options], callback)
+fs.readFileSync(path, [options])
+```
+- path：文件路径，相对或绝对路径
+- options：可选，是一个对象，可以包含定义字符串编码，以及打开文件时使用得模式和标志的 encoding、mode 和 flag 
+  属性。
+- callback：异步方法需要，文件读取完成时将被调用。
+
+以下代码实现了简单的异步 readFile() 请求来从一个配置文件中读取 JSON 字符串，然后用它来创建一个 config 对象。  
+```
+// 读取 JSON 字符串文件到一个对象
+var fs = require('fs');
+var options = {encoding:'utf8', flag:'r'};
+fs.readFile('config.txt', options, function(err, data) {
+	if (err) {
+		console.log("Failed to open Config File.");
+	} else {
+		console.log("Config Loaded.");
+		var config = JSON.parse(data);
+		console.log("Max Files: " + config.maxFilse);
+		console.log("Max Connecttions: " + config.maxConnections);
+		console.log("Root Path: " + config.rootPath);
+	}
+});
+```
+输出：  
+```
+$ node file_read.js
+Config Loaded.
+Max Files: undefined
+Max Connecttions: 15
+Root Path: /webroot
+```
+
+### 6.4.2 同步文件读取  
+文件读取的同步方法涉及在返回执行正在运行的线程之前，读取文件中的数据。这提供了使你能够在代码相同的部分多次读取
+的优点，但如果该文件读取操作控制住其他线程，它就可能是一个缺点。  
+要同步读取一个文件，先用 openSync() 打开它来获取一个文件描述符，然后使用 readSync() 从文件中读取数据。语法：  
+`fs.readSync(fd, buffer, offset, length, position)`  
+- fd：openSync() 返回的文件描述符。
+- buffer：指定将被从文件中读入的 Buffer 对象。
+- offset：指定缓冲区将开始写入数据的索引；置为 null，表示从缓冲区的当前索引处开始。
+- position：指定文件中开始读取的位置；置为 null，表示使用文件的当前位置。
+
+以下代码实现从一个文件中读取字符串数据开的基本同步读取：  
+```
+// 执行从文件同步读取
+var fs = require('fs');
+fd = fs.openSync('veggie.txt', 'r');
+var veggies = "";
+do {
+	var buf = new Buffer(5);
+	buf.fill();
+	var bytes = fs.readSync(fd, buf, null, 5);
+	console.log("read %dbytes", bytes);
+	veggies += buf.toString();
+} while (bytes > 0);
+fs.closeSync(fd);
+console.log("Veggies: " + veggies);
+```
+输出：  
+```
+$ node file_read_sync.js
+read 5bytes
+read 5bytes
+read 5bytes
+read 5bytes
+read 2bytes
+read 0bytes
+Veggies: olives celery carrots
+```
+
+### 6.4.3 异步文件读取  
+文件读取的异步方法在事件队列中放置一个读取请求，然后将控制返回给调用代码。除非事件循环提取出读取请求，并且执行它，
+否则实际的读操作不会发生。在同一个文件上执行多个异步读取请求时，除非在执行下一个读取前等待第一个读取回调函数完成，
+否则不能保证执行的顺序。通常情况下，最简单的是把写操作嵌套在上一个读取操作的回调函数中。  
+要从异步文件中读取，首先使用 open() 打开它，然后在来自打开请求的回调函数已经执行后，使用 read() 读取文件数据。
+以下是 read() 语法：  
+`fs.read(fd, buffer, offset, length, position, callback)`
+- fd：openSync() 返回的文件描述符。
+- buffer：指定将被从文件中读入的 Buffer 对象。
+- offset：指定缓冲区将开始写入数据的索引；置为 null，表示从缓冲区的当前索引处开始。
+- position：指定文件中开始读取的位置；置为 null，表示使用文件的当前位置。
+- callback：必须是可以接受 error、bytes 和 buffer 这三个参数的函数。
+    - error：读取过程发生的错误
+    - bytes：读取的字节数
+    - buffer：从读请求填充数据的缓冲区
+
+以下代码从一个文件中异步读取数据块。注意，open() 的回调函数调用 readFruit() 函数，并传递文件描述符。 read() 的
+回调函数也调用 readFruit()，并传递文件描述符，这保证了异步读取在另一个读取之前完成。
+```
+// 执行从文件异步读取
+var fs = require('fs');
+function readFruit(fd, fruits) {
+	var buf = new Buffer(5);
+	buf.fill();
+	fs.read(fd, buf, 0, 5, null, function(err, bytes, data) {
+		if (bytes > 0) {
+			console.log("read %dbytes", bytes);
+			fruits += data;
+			readFruit(fd, fruits);
+		} else {
+			fs.close(fd);
+			console.log("Fruits: %s", fruits);
+		}
+	});
+}
+fs.open('fruit.txt', 'r', function(err, fd) {
+	readFruit(fd, "");
+});
+```
+
+输出：  
+```
+$ node file_read_async.js
+read 5bytes
+read 5bytes
+read 5bytes
+read 5bytes
+read 5bytes
+read 2bytes
+Fruits: grapes banana orange apple
+```
+
+### 6.4.4 流式文件读取  
+要异步从文件传输数据，首先创建一个 Readable 流对象：  
+`fs.createReadStream(path, [options])`  
+- path：指定文件路径，相对或绝对路径。
+- options：可选，是一个对象，可以包含定义字符串编码，以及打开文件时使用得模式和标志的 encoding、mode 和 flag 
+属性。
+
+当打开 Readable 文件流后，可以用过使用 readable 事件和 read() 请求，或通过实现 data 事件处理程序轻松地从它
+读出。
+以下代码实现了一个基本的 Readable 文件流。
+```
+// 实现 Readable 流，使得能够流式读取一个文件
+var fs = require('fs');
+var options = {encoding: 'utf8', flag: 'r'};
+var fileReadStream = fs.createReadStream("grains.txt", options);
+// data 事件处理程序不断地从流中读取数据
+fileReadStream.on('data', function(chunk) {
+	console.log('Grains: %s', chunk);
+	console.log('Read %d bytes of data.', chunk.length);
+});
+fileReadStream.on("close", function() {
+	console.log("File Closed.");
+});
+```
+输出：  
+```
+$ node file_read_stream.js
+Grains: oats rice wheat
+Read 16 bytes of data.
+File Closed.
+```
+
+## 6.5 其他文件系统任务  
+### 6.5.1 验证路径的存在性  
+
 
 
 
