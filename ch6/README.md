@@ -23,18 +23,20 @@ fs.openSync(path, flags, [mode])
 - mode：文件访问模式，默认为 0666，表示刻度且可写。
 
 定义文件如何打开的标志：  
-- r：
-- r+：
-- rs
-- rs+
-- w
-- wx 
-- w+
-- wx+
-- a
-- ax
-- a+
-- ax+
+- r：打开文件用于读取。如果该文件不存在，则会出现异常
+- r+：打开文件用于读写。如果该文件不存在，则会出现异常
+- rs：在同步模式下打开文件用于读取。这与强制使用 fs.openSync() 不一样。当使用这种模式时，操作系统将绕过本地文件系统
+缓存。因为它可以跳过可能是小的本地缓存，所以这对 NFS 挂在是有用的。你用该只在必要时使用该标志，因为它可能对性能产生
+负面影响
+- rs+：同 rs，除了打开文件用于读写外
+- w：打开文件用于写操作，如果它不存在，就创建该文件；或者如果它确实存在，则截断该文件
+- wx：同 w；但如果路径存在，则打开失败
+- w+：打开文件用于读写。如果它不存在，就创建该文件；或者如果它确实存在，则截断该文件
+- wx+：同 w+；但如果路径存在，则打开失败
+- a：打开文件用于追加。如果它不存在，则创建该文件
+- ax：同 a；但如果路径存在，则打开失败
+- a+：打开文件用于读取和追加。如果它不存在，则创建该文件
+- ax+：同 a+；但如果路径存在，则打开失败
 
 一旦文件被打开，你需要关闭它以迫使操作系统把更改刷新到磁盘并释放操作系统锁。要关闭文件，可使用下列方法，并传递文件
 操作符。异步 close() 方法调用，还需要指定回调函数：  
@@ -502,6 +504,124 @@ $ node file_readdir.js
 ..\ch6\test
 ..\ch6\veggie.txt
 ..\ch6\test\test.js
+```
+
+### 6.5.4 删除文件  
+命令：  
+```
+fs.unlink(path, callback)
+fs.unlinkSync(path)
+```
+unlinkSync(path) 函数返回 true 或 false，这取决于是否删除成功。如果删除该文件时遇到错误，异步的 unlink() 调用
+就传回一个错误值给回调函数。  
+下面代码使用 unlink() 异步 fs 调用删除 new.txt 文件：  
+```
+fs.unlink("new.txt", function(err) {
+	console.log(err ? "File Deleted Failed" : "File Deleted");
+});
+```
+
+### 6.5.5 截断文件  
+截断（Truncate）文件是指通过把文件结束处设置为比当前值小的值来减小文件的大小。可能需要截断不断增长，但不包含
+关键数据的文件（例如，临时日志）。可使用下面的 fs 调用之一来截断文件，传入希望文件截断完成时要包含的字节数：  
+```
+fs.truncate(path, len, callback)
+fs.truncateSync(path, len)
+```
+fs.truncateSync(path) 函数返回 true 或 false，这取决于是否截断成功。如果截断该文件时遇到错误，异步的 truncate() 
+调用就传回一个错误值给回调函数。
+下面代码把 log.txt 的文件截断成零字节：  
+```
+fs.truncate("log.txt", function(err) {
+	console.log(err ? "File Truncate Failed" : "File Truncated");
+});
+```
+
+### 6.5.6 建立和删除目录  
+从 Node.js 添加目录，使用以下 fs 调用之一：  
+```
+fs.mkdir(path, [mode], callback)
+fs.mkdirSync(path, [mode])
+```
+- path：可以是绝对或相对路径
+- mode：可选，指定新目录的访问模式
+
+mkdirSync(path)  返回 true 或 false，取决于目录是否已经成功创建。另一方面，如果遇到错误，异步的 mkdir() 调用
+传递一个 error 值给回调函数。  
+使用异步方法的时候，需要等待创建目录的回调函数完成后，才能创建该目录的子目录。下面演示了如何将创建一个子目录
+结构的操作链接在一起：  
+```
+fs.mkdir("./data", function(err) {
+	fs.mkdir("./data/folderA", function(err) {
+		fs.mkdir("./data/folderA/folderB", function(err) {
+			fs.mkdir("./data/folderA/folderB/folderD", function(err) {
+				
+			});
+		});
+		fs.mkdir("./data/folderA/folderC", function(err) {
+			fs.mkdir("./data/folderA/folderC/folderE", function(err) {
+				
+			});
+		});
+	});
+});
+```
+要从 Node.js 删除目录：  
+```
+fs.rmdir(path, callback)
+fs.rmdirSync(path)
+```
+rmdirSync(path)  返回 true 或 false，取决于目录是否已经成功删除。另一方面，如果遇到错误，异步的 rmdir() 调用
+传递一个 error 值给回调函数。  
+使用异步方法的时候，再删除父目录之前，需要等待删除该目录的回调函数完成。下面演示了如何将删除子目录结构的操作
+链接在一起：  
+```
+fs.rmdir("./data/folderA/folderB/folderC", function(err){
+	fs.rmdir("./data/folderA/folderB", function(err) {
+		fs.rmdir("./data/folderD", function(err) {
+			
+		});
+	});
+	fs.rmdir("./data/folderA/folderC", function(err) {
+		fs.rmdir("./data/folderE", function(err) {
+			
+		});
+	});
+});
+```
+
+### 6.5.7 重命名文件和目录  
+```
+fs.rename(oldPath, newPath, callback)
+fs.renameSync(oldPath, new Path)
+```
+oldPath 指定现有的文件或目录的路径，而 newPath 指定新名称。renameSync(path) 返回 true 或 false，取决于文件或
+目录是否已经成功更名。遇到错误，异步 remane() 调用传递 error 给回调函数。  
+下面代码，把一个名为 old.txt 的文件重命名为 new.txt，并把一个名为 testDir 的目录重命名为 renamedDir：  
+```
+fs.rename("old.txt", "new.txt", function(err) {
+	console.log(err ? "Rename Failed" : "File Renamed");
+});
+
+fs.rename("testDir", "renameDir", function(err) {
+	console.log(err ? "Rename Failed" : "Folder Renamed");
+});
+```
+
+### 6.5.8 监视文件更改
+监视文件，在文件发生变化时执行回调函数。如果希望当文件被修改时触发事件的发生，但不希望从应用程序中直接不断地
+轮询，这会很有用。但是监视在底层操作系统中产生了一些开销，适可而止地使用。  
+监视文件，课使用下面的命令传递想要见识的文件的 path（路径）：  
+`fs.wathcFile(Path, [optins], callback)`  
+可以传入 options 对象，它包含 persistent（持续）和 interval 属性。如果想持续监视，设置 persistent 属性为 true。
+interval 属性指定所需的文件更改的轮询时间，以毫秒为单位。  
+当文件发生变化时，callback 函数就会执行，并传递 Stats 对象。  
+下面代码每个 5 秒监视 log.txt 文件，并使用 Stats 对象来输出本次和上次文件被修改的时间：  
+```
+fs.watchFile("log.txt", {persistent:true, interval:5000}, function (curr, prev) {
+    console.log("log.txt modified at: " + curr.mtime);
+    console.log("Previous modification was: " + prev.mtime);
+});
 ```
 
 
