@@ -1,3 +1,9 @@
+// 解析一个 URL 字符串转换成一个对象，然后将其转换回字符串的例子
+var url = require('url');
+var urlStr = 'http://user:pass@host.com:80/resource/path?query=string#hash';
+var urlObj = url.parse(urlStr, true, false);
+urlString = url.format(urlObj);
+
 // 把一个 URL 解析到新位置
 var url = require('url');
 var originalUrl = 'http://user:pass@host.com:80/resource/path?query=string#hash';
