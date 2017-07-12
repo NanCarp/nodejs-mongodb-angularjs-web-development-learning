@@ -39,3 +39,35 @@ var http = require('http');
 http.createSever(function (req, res) {
     
 }).listen(8080);
+
+var options = {
+    key: fs.readFileSync('test/keys/client.pem'),
+    cert: fs.readfileSync('test/keys/client.crt'),
+    agent: false
+};
+options.agent = new https.Agent(options);
+var options = {
+    hostname: 'encrypted.mysite.com',
+    port: 443,
+    path: '/',
+    method: 'GET',
+    key: fs.readFileSync('test/keys/client.pem'),
+    cert: fs.readFileSync('test/keys/client.crt),
+    agent:false
+};
+var req = https.request(options, function(res) {
+    
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
