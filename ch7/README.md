@@ -58,11 +58,95 @@ console.log(url.resolve(originalUrl, newResource));
 `http://user:pass@host.com:80/another/path?querynew`  
 其注意，在被解析后的 URL 位置中只有资源路径及以后的内容会被改变。
 
+### 7.2 处理查询字符串和表单擦书  
+HTTP 请求通常在 URL 中包含查询字符串或在正文内包含参数数据来处理表单的提交。查询字符串可以从 7.1 节中定义的
+URL 对象获得。由表单请求发送的参数数据可以从客户端请求的正文读出。  
+查询字符串和表单参数都只是基本的键/值对。要在 Node.js 服务器中实际使用这些值，需要使用 querystring 模块的
+parse() 方法将字符串转换成 JavaScript 对象：  
+`querystring.parse(str, [sep], [eq], [options])`  
+- str 参数是查询或参数字符串。
+- sep 参数允许你指定使用得分隔符，默认的分隔符是 &。
+- options 参数是一个具有属性 maxKeys 的对象，它让你能够限制生成的对象可以包含的键的数量，默认值是 1000。如果
+指定为 0，则表示没有任何限制。
 
+parse() 解析查询字符串的例子：  
+```
+var qstring = require('querystring');
+var params = qstring.parse("name=Brad&color=red&color=blue");
+console.log(params);
+```
+可以反过来使用 stringify() 函数把一个对象转换成一个查询字符串：  
+`querystring.stringify(obj, [sep], [eq])`
 
+## 7.3 了解请求、响应和服务器对象  
+### 7.3.1 http.ClientRequest 对象  
+当构建一个 HTTP 客户端时，调用 http.request() 使得一个 ClientRequest 对象在内部被创建。这个对象是为了当该
+请求在服务器上进展的时候来表示它。使用 ClientRequest 对象来启动。监控和处理来自服务器的响应。  
+ClientRequest 对象实现了一个 Writable 流，所以它提供了一个 Writable 流对象的所有功能。例如，可以使用 write() 方法写入 ClientRequest 对象以及把一个 Readable 流用管道传输到它里面去。  
+来实现 ClientRequest 对象，以下语法：  
+`http.request(option, callback)`  
+- options：一个对象，其属性定义了如何把客户端的 HTTP 请求打开并发送到服务器。
+- callback：回调函数，在把请求发送到服务器后，要处理从服务器返回的响应时调用此函数。唯一的参数是一个 
+IncomingMessage 对象，该对象是来自服务器的响应。  
 
+下面代码显示了 ClientRequest 对象的基本实现：  
+```
+var http = require('http');
+var options = {
+    hostname = 'www.myserver.com',
+    path: '/',
+    port: '8080',
+    method: 'POST'
+};
+var req = http.request(options, function(response) {
+    var str = '';
+    response.on('data', function (chunk) {
+        str += chunk;
+    });
+    response.on('end', function () {
+        console.log(str);
+    });
+});
+req.end();
+```
+在创建 ClientRequest 对象时，可以指定的选项  
+- host：请求发往的服务器的域名或 IP 地址，默认为 localhost
+- hostname：与 host 相同，但对 url.parse() 的支持由于 host
+- port：远程服务器的端口，默认为 80
+- localAddress：网络连接绑定的本地接口
+- socketPath：Unix 域套接字（使用 host:port 或 socketPath）
+- method：指定 HTTP 请求方法的字符串。例如，GET、POST、CONNECT、OPTIONS 等。默认为 GET
+- path：指定所请求的资源路径的字符串。默认为/。这也应该包含查询字符串（如果有）。例如：/book.html?chapter=12
+- headers：包含请求标头的对象。例如：{'content-length': '750'， 'content-type': 'text/plain'}s
+- auth：基本身份验证，形式：user:password，用于计算 Authorization 头。
+    - undefined（默认值）：使用全局 Agent
+    - Agent：使用特定 Agent 对象
+    - false：禁用 Agent 行为
+    
+ClientRequest 对象提供的时间：  
+- response：当服务器接收到该请求的响应时发出，该回调处理程序接受一个 IncomingMessage 对象最为唯一的参数
+- socket：当一个套接字被分配给该请求后发出。如果该事件未由客户端处理，那么该连接将被关闭
+- upgrade：当服务器响应在其标头包括一个更新的请求时发出
+- continue：当服务器发送一个 100 Continue HTTP 响应，指示客户端发送请求正文时发出
 
+适用于 ClientRequest 对象的方法  
+- write(chunk, [encoding])：把一个正文数据块（Buffer 或 String 对象）写入请求，这可以让你的数据流入 
+ClientRequest 对象的 Writable 流。如果传输正文数据，则当创建请求时应该包括 {'Transter-Encoding', 'chunked}
+标头选项。编码默认参数为 utf8
+- end([data], [encoding])：把可选的数据写入请求正文，然后刷新 Writable 流并终止该请求
+- abort()：终止当前的请求
+- setTimeout(timeout, [callback]) 为请求设置套接字超时时间
+- setNoDeploy([noDelay])：禁用在发送数据之前缓冲数据的 Nagle 算法。noDelay 参数是一个布尔值，为 true 表
+示立即写，为 false 表示缓冲写入
+- setSocketKeepAlive([enable], [initialDelay])：启用和禁用对客户机请求的保持活动功能。enable 参数默认
+为 false，即禁用。initialDelay 参数指定最后一个数据包和第一个保持活动请求之间的延迟
 
+### 7.3.2 http.ServerResponse 对象  
+当 HTTP 服务器接收到一个 request（请求）事件时，它在内部创建一个 ServerResponse 对象。这个对象作为第二个参数
+被传递到 request（请求）事件处理程序。可以使用 ServerRequest 对象制定并发送到客户端的响应。  
+ServerResponse 对象实现了一个 Writable 流，所以它提供了一个 Writable 流对象的所有功能。例如，你可以使用 
+write() 方法写入 ServerResponse 对象，也可以用管道把 Readable 流传入它以把数据写回客户端。  
+处理客户端请求时
 
 
 
