@@ -146,7 +146,43 @@ ClientRequest 对象的 Writable 流。如果传输正文数据，则当创建�
 被传递到 request（请求）事件处理程序。可以使用 ServerRequest 对象制定并发送到客户端的响应。  
 ServerResponse 对象实现了一个 Writable 流，所以它提供了一个 Writable 流对象的所有功能。例如，你可以使用 
 write() 方法写入 ServerResponse 对象，也可以用管道把 Readable 流传入它以把数据写回客户端。  
-处理客户端请求时
+处理客户端请求时，使用属性、事件和 ServerResponse 对象的方法来建立和发送标头、写入数据，以及发送响应。  
+  
+ServerResponse 对象提供的事件和属性  
+- close：当到客户端的连接在发送 Response.End() 来完成并刷新响应之前关闭时发出
+- headersSent：布尔值：如果标头已被发送，为 true；否则为 false。这是只读的
+- sendDate：布尔值：如果设置为 true，则 Date 标头是自动生成的，并作为响应的一部分发送
+- statusCode：让你无须显式地写入标头来指定响应状态码。例如：response.statusCode=500
+
+适用于 ServerResponse 对象的方法  
+- writeContinue()：发送一个 HTTP/ 1.1 100 Continue 消息给客户端，请求被发送的正文内容
+- writeHead(statusCode, [reasonPhrase], [headers])：把一个响应写入请求。StatusCode 参数是 3 位数的
+HTTP 响应状态代码，如 200、401，或 500。可选的 reasonPhrase 是一个字符串，表示 StatusCode 的原因，headers 
+是响应标头对象，例如：
+    ```
+    response.writeHead(200, 'Success', {
+        'Content-Length': body.length,
+        'Content-type': 'text/plain'
+    });
+    ```
+- setTimeout(msecs, callback)：设置客户端连接的套接字超时时间，以毫秒计，带有一个如果发生超时时将被执行的
+回调函数
+- setHeader(name, value)：设置一个特定的标头值，其中 name 是 HTTP 标头的名称，而 value 是标头的值
+- getHeader(name)：获取已在响应中设置的一个 HTTP 标头的值
+- removeHeader(name)：移除已在响应中设置的一个 HTTP 标头
+- write(chunk, [encoding])： 写入 chunk、buffer 或 String 对象到响应 Writable 流。这仅把数据写入响应的
+正文部分。默认编码为 uft8。如果数据被成功写入，返回 true；否则，如果数据被写入到用户内存，则返回 false，如果
+返回 false，当缓冲区再次空闲时 drain 事件将由 Writable 流发出
+- addTrailers(headers)：将 HTTP 尾随标头写入响应的结束处
+- end([data], [encoding])：将可选的数据输出写入响应的正文，然后刷新 Writable 流并完成响应
+
+### 7.3.3 http.IncomingMessage 对象  
+
+
+
+
+
+
 
 
 
