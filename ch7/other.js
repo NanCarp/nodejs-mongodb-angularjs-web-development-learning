@@ -1,24 +1,24 @@
-// ½âÎöÒ»¸ö URL ×Ö·û´®×ª»»³ÉÒ»¸ö¶ÔÏó£¬È»ºó½«Æä×ª»»»Ø×Ö·û´®µÄÀý×Ó
+// ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ URL ï¿½Ö·ï¿½ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È»ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 var url = require('url');
 var urlStr = 'http://user:pass@host.com:80/resource/path?query=string#hash';
 var urlObj = url.parse(urlStr, true, false);
 urlString = url.format(urlObj);
 
-// °ÑÒ»¸ö URL ½âÎöµ½ÐÂÎ»ÖÃ
+// ï¿½ï¿½Ò»ï¿½ï¿½ URL ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½
 var url = require('url');
 var originalUrl = 'http://user:pass@host.com:80/resource/path?query=string#hash';
 var newResource = '/another/path?querynew';
 console.log(url.resolve(originalUrl, newResource));
 
-// Ê¹ÓÃ parse() ½âÎö²éÑ¯×Ö·û´®
+// Ê¹ï¿½ï¿½ parse() ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¯ï¿½Ö·ï¿½ï¿½ï¿½
 var qstring = require('querystring');
 var params = qstring.parse("name=Brad&color=red&color=blue");
 console.log(params);
 
-// ÊµÏÖ ClientRequest ¶ÔÏó
+// Êµï¿½ï¿½ ClientRequest ï¿½ï¿½ï¿½ï¿½
 var http = require('http');
 var options = {
-    hostname = 'www.myserver.com',
+    hostname: 'www.myserver.com',
     path: '/',
     port: '8080',
     method: 'POST'
@@ -34,7 +34,7 @@ var req = http.request(options, function(response) {
 });
 req.end();
 
-// Æô¶¯ HTTP ·þÎñ£¬¼àÌý¶Ë¿Ú 8080
+// ï¿½ï¿½ï¿½ï¿½ HTTP ï¿½ï¿½ï¿½ñ£¬¼ï¿½ï¿½ï¿½ï¿½Ë¿ï¿½ 8080
 var http = require('http');
 http.createSever(function (req, res) {
     
@@ -52,7 +52,7 @@ var options = {
     path: '/',
     method: 'GET',
     key: fs.readFileSync('test/keys/client.pem'),
-    cert: fs.readFileSync('test/keys/client.crt),
+    cert: fs.readFileSync('test/keys/client.crt'),
     agent:false
 };
 var req = https.request(options, function(res) {
