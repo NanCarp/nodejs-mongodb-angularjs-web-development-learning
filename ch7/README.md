@@ -177,8 +177,42 @@ HTTP 响应状态代码，如 200、401，或 500。可选的 reasonPhrase 是�
 - end([data], [encoding])：将可选的数据输出写入响应的正文，然后刷新 Writable 流并完成响应
 
 ### 7.3.3 http.IncomingMessage 对象  
+无论是 HTTP 服务器还是 HTTP 客户端都创建 IncomingMessage 对象。服务器端的客户端请求或客户端的服务器响应都可以
+由 IncomingMessage 对象表示，因为它们的功能基本相同。  
+该 IncomingMessage 对象实现了 Readable 流，能够把客户端请求或服务器响应作为流源读入。可以监听 readable 和 
+data 事件，从流中读取数据。  
+ServerResponse 对象中可用的事件、属性和方法  
+- close：当底层套接字被关闭时发出
+- httpVersion：指定用于构建客户端请求/响应的 HTTP 版本
+- headers：包含了随请求/回应发送的标头的一个对象
+- trailers：包含了随请求/响应发送的任何 trailer 标头的对象
+- method：指定用于请求/响应的方法（例如，GET、POST 或 CONNECT）
+- url：发送到服务器的 URL 字符串，这是可以传送到 url.parse() 的字符串。这个属性只在处理客户端请求的 HTTP 服务
+中有效
+- statusCode：指定来自服务器的 3 位数状态码。此属性只在处理客户端响应的 HTTP 服务中有效
+- socket：这是一个指向 net.Socket 对象的句柄，用来与客户端/服务器通信
+- setTimeout(msecs, callback)：设置连接的超时时间，以毫秒为单位，以及发生超时时执行的回调函数
 
-
+### 7.3.4 HTTP Server 对象  
+Node.js Server 对象提供了实现 HTTP 服务器的基本框架。它提供了一个监听端口的底层套接字和接收请求，然后发送
+响应给客户端连接的处理程序。当服务器正在监听时，Node.js 应用程序没有结束。  
+Server 对象实现 EventEmitter 并且发出如下面列出的事件。实现一个 HTTP 服务器时，需要处理这些事件中的至少某些
+或全部。例如，当收到客户端请求时，至少需要一个事件处理程序来处理所发生的 request 事件。  
+可以被 Server 对象触发的事件：  
+- request：每当服务器收到客户端请求时触发，回调函数接收两个参数。第一个是代表客户端请求的 IncomingMessage 对象，
+第二个是用来制定和发送响应的 ServerResponse 对象。例如：function callback (request, response) {}
+- connection：当一个新的 TCP 流建立时触发。回调函数接收套接字作为唯一的参数。例如：
+function callback(socket) {}
+- close：服务器关闭时触发，回调函数不接收参数
+- checkContinue：当收到包括期待的 100-continue 标头的请求时触发。即使不处理此事件，默认的事件处理程序也响应 
+HTTP/1.1 100 Continue。例如：function callback(request, response) {}
+- connect：接收到 HTTP CONNECT 请求时发出。callback 接收 request、socket、以及 head，它是一个包含隧道流的
+第一个包的缓冲区。例如：function callback(request, socket, head) {}
+- upgrage：当客户端请求 HTTP 升级时发出。如果不处理这个事件，则客户端发送一个升级请求来把自己的连接关闭。
+callback 接收 request、socket、以及 head，它是一个包含隧道流的第一个包的缓冲区。
+例如：function callback(request, socket, head) {}
+- clientError：当客户端连接套接字发出一个错误时发出。callback 接收 error 作为第一个参数，并接收 socket 作
+为第二个参数。例如：function callback (errorm socket) {}
 
 
 
