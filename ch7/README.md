@@ -214,7 +214,37 @@ callback 接收 request、socket、以及 head，它是一个包含隧道流的�
 - clientError：当客户端连接套接字发出一个错误时发出。callback 接收 error 作为第一个参数，并接收 socket 作
 为第二个参数。例如：function callback (errorm socket) {}
 
+启动 HTTP 服务器，首先使用 createServer() 创建 Server 对象：  
+`http.createServer([requestListener])`  
+此方法返回 Server 对象，可选的 requestListener 参数是在请求事件被触发时执行的回调函数。其接收两个参数：代表
+客户端请求的 IncomingMessage 对象，制定和发送响应的 ServerResponse 对象。  
+一旦创建 Server 对象，可以调用 Server 对象的 listen() 方法开始监听它：  
+`listen(port, [hostname], [nacklog], [callback])`  
 
+常用方法：
+- port（端口）：指定监听的福安口。
+- hostname（主机名）：当主机名将接收连接时指定。如果省略，服务器接受直接指向任何 IPv4 地址（INADDR_ANY）的
+连接。
+- backlog（挤压）：指定被允许进行排队的最大待处理连接数。默认值 511。
+- callback（回调）：指定该服务器已经开始在指定的端口上监听时，要执行的回调处理程序。
+
+下面显示，启动一个 HTTP 服务器并监听端口 8080。注意，请求回调处理函数被传递到 createServer() 方法中：  
+```
+var http = require('http');
+http.createSever(function (req, res) {
+    
+}).listen(8080);
+```
+可以使用另外两种方法监听通过文件系统的连接：  
+```
+listen(path, [callback]) // 接受一个要监听的文件路径
+listen(handle, [callback]) // 接受一个已经打开的文件描述符句柄
+```
+停止监听：  
+`close([callback])`  
+
+## 7.4 在 Node.js 中实现 HTTP 客户端和服务器  
+### 7.4.1 提供静态文件服务  
 
 
 
