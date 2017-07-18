@@ -245,6 +245,123 @@ listen(handle, [callback]) // 接受一个已经打开的文件描述符句柄
 
 ## 7.4 在 Node.js 中实现 HTTP 客户端和服务器  
 ### 7.4.1 提供静态文件服务  
+为了在 Node.js 中提供静态文件服务，需要先启动 HTTP 服务器并监听端口。然后，在请求处理程序中，需要使用 fs 模块
+在本地打开该文件，然后在响应中写入文件的内容。  
+下面显示静态文件服务器的基本实现。createServer() 创建服务器，listen() 在 Server 对象上监听 8080 端口。
+url.parse() 方法解析 URL，pathname（路径名）指定文件路径。静态文件使用 fs.readFile() 被打开和读取，并在 
+readFile() 回调函数中，使用 res.end(data) 把该文件的内容写入响应对象。  
+```
+// 实现一个基本的静态文件服务的 Web 服务器
+var fs = require('fs');
+var http = require('http');
+var url = require('url');
+var ROOT_DIR = "html/";
+http.createServer(function (req, res) {
+    var urlObj = url.parse(req.url, true, false);
+    fs.readFile(ROOT_DIR + urlObj.pathname, function (err, data) {
+        if (err) {
+            res.writeHead(404);
+            res.end(JSON.stringify(err));
+            return;
+        }
+        res.writeHead(200);
+        res.end(data);
+    });
+}).listen(8080);
+```
+打开浏览器，输入 URL localhost:8080。  
+下面显示了一个 HTTP 客户端的基本实现，它向服务器发送一个 GET 请求来检索文件内容。当请求完成时，回调函数使用 
+on('data') 处理程序来读取来自服务器的响应中的内容，然后 on('end') 处理程序来吧文件内容记录到一个文件。  
+```
+// 一个基本的 Web 客户端检索静态文件
+var http = require('http');
+var options = {
+    hostname: 'localhost',
+    port: '8080',
+    path: '/hello.html'
+};
+function handleResponse(response) {
+    var serverData = '';
+    response.on('data', function (chunk) {
+        serverData += chunk;
+    });
+    response.on('end', function () {
+        console.log(serverData);
+    });
+}
+http.request(options, function(response) {
+    handleResponse(response);
+}).end();
+```
+输出：  
+客户端：  
+```
+<html>
+  <head>
+    <title>Static Example</title>
+  </head>
+  <body>
+    <h1>Hello from a Static File</h1>
+  </body>
+</html>
+```
+浏览器，输入 localhost:8080/hello.html：  
+`Hello from a Static File`  
+
+### 7.4.2 实现动态的 GET 服务器  
+下面实现了一个动态 Web 服务器。Web 服务器简单地用一个动态生成的 HTTP 文件来响应。该例旨在显示发送标头，建立
+响应，然后在一系列 write() 请求中发送数据的过程。在请求事件处理程序中，Content-Type 标头被设置，然后标头随同
+响应代码 200 被发送。在现实中，将会做很多处理来准备数据。本例中，数据只是定义的消息数组。循环遍历这些消息并
+每次调用 write() 把响应传送到客户端。响应通过对 end() 的调用被完成。  
+```
+// 实现基本的 GET Web 服务器
+var http = require('http');
+var messages = [
+    'Hello World',
+    'From a basic Node.js server',
+    'Take Luck'];
+http.createServer(function (req, res) {
+    res.setHeader("Content-Type", "text/html");
+    res.writeHead(200);
+    res.write('<html><head><title>Simple HTTP Server</title></head>');
+    res.write('<body');
+    for (var idx in messages) {
+        res.write('\n<h1.' + messages[idx] + '</h1>');
+    }
+    res.end('\n</body></html>');
+}).listen(8080);
+```
+下面显示了从 GET Web 服务器读取响应的 HTTP 客户端的基本实现。注意，没有路径被指定（因为该服务并不真正需要
+一个路径）。对于更复杂的服务，要实现查询字符串或复杂的路径的路由来处理各种调用。  
+```
+// 针对 GET Web 服务器发出 GET 请求的基本 Web 客户端
+var http = require('http');
+var options = {
+    hostname: 'localhost',
+    port: '8080,
+};
+function handleResponse(response) {
+    var serverData = '';
+    response.on('data', function (chunk) {
+        serverData += chunk;
+    });
+    response.on('end', function () {
+		// 记录响应的 StatusCode 
+        console.log("Response Status:", response.statusCode);
+		// 记录响应的 headers
+        console.log("Response Headers:", response.headers);
+		// 记录完整的服务器响应
+        console.log(serverData);
+    });
+}
+http.request(options, function(response) {
+    handleResponse(response);
+}).end();
+```
+输出：  
+报错
+
+### 7.4.3 实现 POST 服务器  
 
 
 

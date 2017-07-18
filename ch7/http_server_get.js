@@ -1,3 +1,4 @@
+// 实现基本的 GET Web 服务器
 var http = require('http');
 var messages = [
     'Hello World',
@@ -12,4 +13,4 @@ http.createServer(function (req, res) {
         res.write('\n<h1.' + messages[idx] + '</h1>');
     }
     res.end('\n</body></html>');
-}).listen(8888);
+}).listen(8080);

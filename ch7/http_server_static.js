@@ -1,3 +1,4 @@
+// 实现一个基本的静态文件服务的 Web 服务器
 var fs = require('fs');
 var http = require('http');
 var url = require('url');
@@ -13,4 +14,4 @@ http.createServer(function (req, res) {
         res.writeHead(200);
         res.end(data);
     });
-}).listen(8888);
+}).listen(8080);

@@ -1,7 +1,8 @@
+// 一个基本的 Web 客户端检索静态文件
 var http = require('http');
 var options = {
     hostname: 'localhost',
-    port: '8888',
+    port: '8080',
     path: '/hello.html'
 };
 function handleResponse(response) {
