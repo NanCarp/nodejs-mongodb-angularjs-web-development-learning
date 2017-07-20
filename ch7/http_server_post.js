@@ -1,9 +1,13 @@
+// 实现一个处理 HTTP POST 请求的基本 HTTP 服务器
 var http = require('http');
 http.createServer(function (req, res) {
+	// 从请求流中读取数据
     var jsonData = "";
     req.on('data', function (chunk) {
         jsonData += chunk;
     });
+	// 事件处理程序，该数据被转换为一个对象，并建立
+	// 具有 message 和 question 属性的新对象
     req.on('end', function () {
         var reqObj = JSON.parse(jsonData);
         var resObj = {
@@ -11,16 +15,17 @@ http.createServer(function (req, res) {
             question: "Are you a good " + reqObj.occupation + "?"
         };
         res.writeHead(200);
+		// 响应 JSON 字符串被转化为一个对象
         res.end(JSON.stringify(resObj));
     });
-}).listen(8888);
+}).listen(8080);
 
 
 var http = require('http');
 var options = {
     host: '127.0.0.1',
     path: '/',
-    port: '8888',
+    port: '8080',
     method: 'POST'
 };
 function readJSONResponse(response) {

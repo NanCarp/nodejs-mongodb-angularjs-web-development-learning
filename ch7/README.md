@@ -362,7 +362,154 @@ http.request(options, function(response) {
 报错
 
 ### 7.4.3 实现 POST 服务器  
+下面显示处理 POST 请求的动态 Web 服务的基本实现。本例中，Web 服务从客户端接收一个 JSON 字符串，它表示一个
+具有 name 和 occupation 属性的对象。  
+```
+// 实现一个处理 HTTP POST 请求的基本 HTTP 服务器
+var http = require('http');
+http.createServer(function (req, res) {
+	// 从请求流中读取数据
+    var jsonData = "";
+    req.on('data', function (chunk) {
+        jsonData += chunk;
+    });
+	// 事件处理程序，该数据被转换为一个对象，并建立
+	// 具有 message 和 question 属性的新对象
+    req.on('end', function () {
+        var reqObj = JSON.parse(jsonData);
+        var resObj = {
+            message: "Hello " + reqObj.name,
+            question: "Are you a good " + reqObj.occupation + "?"
+        };
+        res.writeHead(200);
+		// 响应 JSON 字符串被转化为一个对象
+        res.end(JSON.stringify(resObj));
+    });
+}).listen(8080);
 
+
+var http = require('http');
+var options = {
+    host: '127.0.0.1',
+    path: '/',
+    port: '8888',
+    method: 'POST'
+};
+function readJSONResponse(response) {
+    var responseData = '';
+    response.on('data', function (chunk) {
+        responseData += chunk;
+    });
+    response.on('end', function () {
+        var dataObj = JSON.parse(responseData);
+        console.log("Raw Response: " + responseData);
+        console.log("Message: " + dataObj.message);
+        console.log("Question: " + dataObj.question);
+    });
+}
+var req = http.request(options, readJSONResponse);
+req.write('{"name":"Bilbo", "occupation":"Burglar"}');
+req.end();
+```
+下面显示把 JSON 数据作为 POST 请求的一部分发送到服务器的 HTTP 客户端的基本实现。  
+```
+// 使用 POST 发送 JSON 数据到服务器，
+// 并处理 JSON 响应的基本 HTTP 客户端
+var http = require('http');
+var options = {
+    host: '127.0.0.1',
+    path: '/',
+    port: '8080',
+    method: 'POST'
+};
+function readJSONResponse(response) {
+    var responseData = '';
+	// 读取 JSON 响应
+    response.on('data', function (chunk) {
+        responseData += chunk;
+    });
+	// 把响应解析成一个 JSON 对象，并输出原始响应、消息、问题
+    response.on('end', function () {
+        var dataObj = JSON.parse(responseData);
+        console.log("Raw Response: " + responseData);
+        console.log("Message: " + dataObj.message);
+        console.log("Question: " + dataObj.question);
+    });
+}
+// 请求开始
+var req = http.request(options, readJSONResponse);
+// 把 JSON 字符串写入请求流
+req.write('{"name":"Bilbo", "occupation":"Burglar"}');
+// 完成请求
+req.end();
+```
+输出：  
+```
+Raw Response: {"message":"Hello Bilbo","question":"Are you a good Burglar?"}
+Message: Hello Bilbo
+Question: Are you a good Burglar?
+```
+
+### 7.4.4 与外部源交互  
+下面显示同时接收 GET 和 POST 请求的 Web 服务器的实现。对于 GET 请求，返回带有表单的简单网页，它允许用户提交
+一个城市的名字。然后在 POST 请求中，城市名称被访问，且 Node.js 客户端启动并远程连接到 openweathermap.org 检索
+该城市的天气信息。之后这些信息连同原来的网页表单被一起返回到服务器。
+```
+// 实现远程连接到外部天气数据源的 HTTP Web 服务
+var http = require('http');
+var url = require('url');
+var qstring = require('querystring');
+// 完成响应，并将其返回客户端
+function sendResponse(weatherData, res){
+  var page = '<html><head><title>External Example</title></head>' +
+    '<body>' +
+    '<form method="post">' +
+    'City: <input name="city"><br>' +
+    '<input type="submit" value="Get Weather">' +
+    '</form>';
+  if(weatherData){
+    page += '<h1>Weather Info</h1><p>' + weatherData +'</p>';
+  }
+  page += '</body></html>';    
+  res.end(page);
+}
+// 读取响应并把数据传递到 sendResponse() 函数
+function parseWeather(weatherResponse, res) {
+  var weatherData = '';
+  weatherResponse.on('data', function (chunk) {
+    weatherData += chunk;
+  });
+  weatherResponse.on('end', function () {
+    sendResponse(weatherData, res);
+  });
+}
+// 实现对 openweathermap.org 的客户端请求
+function getWeather(city, res){
+  var options = {
+    host: 'http://samples.openweathermap.org',
+    path: '/data/2.5/weather?q=' + city
+  };
+  http.request(options, function(weatherResponse){
+    parseWeather(weatherResponse, res);
+  }).end();
+}
+// 实现 Web 服务器
+http.createServer(function (req, res) {
+  console.log(req.method);
+  if (req.method == "POST"){
+    var reqData = '';
+    req.on('data', function (chunk) {
+      reqData += chunk;
+    });
+    req.on('end', function() {
+      var postParams = qstring.parse(reqData);
+      getWeather(postParams.city, res);
+    });
+  } else{
+    sendResponse(null, res);
+  }
+}).listen(8080);
+```
 
 
 
