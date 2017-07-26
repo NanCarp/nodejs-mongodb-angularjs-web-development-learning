@@ -37,11 +37,40 @@ function writeData(socket, data) {
 	}
 }
 
+var server = net.createServer(function (client)) {
+	// 这里实现连接的回调处理程序代码
+});
+server.listen(8107, function () {
+	// 这里实现监听回调处理
+});
 
+server.on('close', function () {
+	console.log('Server Terminated');
+});
+server.on('error', function (err) {
+	
+});
 
+this.setTimeout(500);
+this.setEncoding('utf8');
 
+this.on('data', function (data) {
+	console.log("Received from client: " + data.toString());
+	// 处理数据
+});
 
+function writeData(socket, data) {
+	var success = !socket.write(data);
+	if (!success) {
+		(function (socket, data) {
+			socket.once('drain', function () {
+				writeData(socket, data);
+			});
+		})(socket, data);
+	}
+}
 
+ 
 
 
 
