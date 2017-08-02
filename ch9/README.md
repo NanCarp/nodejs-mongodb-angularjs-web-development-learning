@@ -108,6 +108,67 @@ child.on('exit', function (code) {
 })
 ```
 
+### 9.2.3 使用 execFile() 在另一个进程上执行一个可执行文件  
+从一个 Node.js 进程中把工作添加到另一个进程，可使用 execFile() 函数在另一个进程上执行可执行文件。execFile() 
+没有使用子 shell。这使得 exeFile() 更轻量，但是要执行的命令必须是一个二进制可执行文件。Linux 的 shell 脚本
+和 Windows 的批处理文件不能使用 execFile() 函数来执行。  
+execFile() 函数返回一个 ChildProcess 对象，语法：  
+`child_process.execFile(file, args, options, callback)`  
+- file：字符串，指定要执行的可执行文件的路径。
+- args：数组，指定传递可执行文件的命令行参数。
+- option： 对象，指定执行命令式使用的设置。
+- callback：
+    - error：传递错误对象
+    - stdout、stderr：包含执行命令的输出的 Buffer 对象
+
+下面使用 execFile() 函数执行系统命令：  
+```
+var childProcess = require('child_process');
+var options = {maxBuffer: 100 * 1024, encoding: 'utf8', timeout: 5000};
+var child = childProcess.execFile('ping.exe', ['-n', '1', 'google.com'], options, function (error, stdout, stderr) {
+    if (error) {
+        console.log(error.stack);
+        console.log('Error Code: ' + error.code);
+        console.log('Error Signal: ' + error.signal)
+    }
+    console.log('Results: \n' + stdout);
+    if (stderr.length) {
+        console.log('Errors: ' + stderr)
+    }
+});
+child.on('exit', function (code) {
+    console.log('Child completed with code: ' + code);
+});
+```
+输出：  
+```
+$ node child_process_exec_file.js
+Child completed with code: 0
+Results:
+
+Pinging google.com [216.58.200.192] with 32 bytes of data:
+Reply from 216.58.200.192: bytes=32 time=365ms TTL=41
+
+Ping statistics for 216.58.200.192:
+    Packets: Sent = 1, Received = 1, Lost = 0 (0% loss),
+Approximate round trip times in milli-seconds:
+    Minimum = 365ms, Maximum = 365ms, Average = 365ms
+
+```
+
+### 9.2.4 使用 spawn() 在另一个 Node.js 实例中产生一个进程  
+从一个 Node.js 进程中把工作加入到另一个进程中的一个相当复杂的方法是产生（spawn）另一个进程，连接它们之间 
+stdin、stdout 和 stderr 的管道，然后在新的进程中使用 spawn() 函数执行一个文件。这种方法比单纯使用 exec() 的
+负担稍微重一些，但是提供了一些很大的好处。  
+
+
+
+
+
+
+
+
+
 
 
 
