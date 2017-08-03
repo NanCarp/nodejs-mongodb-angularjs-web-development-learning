@@ -160,7 +160,52 @@ Approximate round trip times in milli-seconds:
 从一个 Node.js 进程中把工作加入到另一个进程中的一个相当复杂的方法是产生（spawn）另一个进程，连接它们之间 
 stdin、stdout 和 stderr 的管道，然后在新的进程中使用 spawn() 函数执行一个文件。这种方法比单纯使用 exec() 的
 负担稍微重一些，但是提供了一些很大的好处。  
+spawn() 和 exec()/execFile() 的主要区别是产生的进程中的 stdin 可以进行配置，并且 stdout 和 stderr 都是
+父进程中的 Readable 流。这意味着，exec() 和 execFile() 必须先执行完成，然后才能读取缓冲区输出。但是，一旦
+一个 spawn() 进程的输出数据已被写入，你就可以读取它。  
+spawn() 函数返回一个 ChildProcess 对象，语法：  
+`child_process.spawn(command, [args], [options])`  
+- command：字符串，指定在子 shell 中执行的命令。
+- options：一个对象，指定执行命令时使用得设置。
+- callback：
+    - error：传递错误对象
+    - stdout、stderr：都由 stdio 选项设置定义，默认它们是 Readable 流对象。
+    
+下面使用 spawn() 函数执行一个系统命令：  
+```
+var spawn = require('child_process').spawn;
+var options = {
+    env: {user: 'brad'},
+    detached: false,
+    stdio: ['pipe', 'pipe', 'pipe']
+};
+var child = spawn('netstat', ['-e']);
+child.stdout.on('data', function (data) {
+    console.log(data.toString());
+});
+child.stderr.on('data', function (data) {
+    console.log(data.toString())
+});
+child.on('exit', function (code) {
+    console.log('Child exited with code', code);
+});
+```
+输出：  
+```
+$ node child_process_spawn_file.js
+Interface Statistics
 
+                           Received            Sent
+
+Bytes                     663608438       102727709
+Unicast packets             3575971         1150702
+Non-unicast packets            7553           12782
+Discards                          0               0
+Errors                            0               0
+
+Child exited with code 0
+Unknown protocols  
+```
 
 
 
